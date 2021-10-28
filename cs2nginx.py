@@ -24,9 +24,15 @@ parser = argparse.ArgumentParser(description=description)
 parser.add_argument('-i', dest='inputfile', help='C2 Profile file', required=True)
 parser.add_argument('-c', dest='c2server', help='C2 Server URL (e.g., http://teamserver_ip or https://teamserver_domain)', required=True)
 parser.add_argument('-r', dest='redirect', help='Redirect non-matching requests to this URL (http://google.com)', required=True)
+parser.add_argument('-f', dest='folder', help='Folder containgin the certificates generated with letsencrypt. NOT the full path!! Usualii is the domain name or www.domain_name', required=False)
 parser.add_argument('-H', dest='hostname', help='Hostname for Nginx redirector', required=True)
 
 args = parser.parse_args()
+
+# find certs
+cert_location = '<DOMAIN_NAME>'
+if args.folder:
+    cert_location = args.folder
 
 # Make sure we were provided with vaild URLs 
 # https://stackoverflow.com/questions/7160737/python-how-to-validate-a-url-in-python-malformed-or-not
@@ -119,6 +125,7 @@ http {{
     tcp_nodelay on;
     keepalive_timeout 65;
     types_hash_max_size 2048;
+    client_max_body_size 100M;
 
     # Disable detailed NGINX "Server" header
     server_tokens off;
@@ -144,7 +151,8 @@ http {{
     #############################
     log_format main '[$time_iso8601] $remote_addr - $remote_user  proxy:$upstream_addr $status '
                     '"$request" $body_bytes_sent "$http_referer"'
-                    '"$http_user_agent" "$http_x_forwarded_for"';
+                    '"$http_user_agent" "$http_x_forwarded_for"'
+                    '"$request_body"';
 
     access_log /var/log/nginx/access.log main;
     error_log /var/log/nginx/error.log;
@@ -171,22 +179,22 @@ http {{
         #########################
         # Listening ports
         #########################
-        listen 80;
-        listen [::]:80;
+        #listen 80;
+        #listen [::]:80;
         
         #####################
         # SSL Configuration
         #####################
-        #listen 443 ssl;
-        #listen [::]:443 ssl;
-        #ssl on;
+        listen 443 ssl;
+        listen [::]:443 ssl;
+        ssl on;
 
-        #ssl_certificate /etc/letsencrypt/live/<DOMAIN_NAME>/fullchain.pem; # managed by Certbot
-        #ssl_certificate_key /etc/letsencrypt/live/<DOMAIN_NAME>/privkey.pem; # managed by Certbot
-        #ssl_session_cache shared:le_nginx_SSL:1m; # managed by Certbot
-        #ssl_session_timeout 1440m; # managed by Certbot
-        #ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # managed by Certbot
-        #ssl_prefer_server_ciphers on; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/{cert_path}/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/{cert_path}/privkey.pem; # managed by Certbot
+        ssl_session_cache shared:le_nginx_SSL:1m; # managed by Certbot
+        ssl_session_timeout 1440m; # managed by Certbot
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # managed by Certbot
+        ssl_prefer_server_ciphers on; # managed by Certbot
 
         #########################################
         # Server root directory for serving files
@@ -232,7 +240,7 @@ http {{
 
         # Redirect requests to the $REDIRECT_DOMAIN + Original request URI
         location @redirect {{
-        	return 302 $REDIRECT_DOMAIN$request_uri;
+        	return 302 $REDIRECT_DOMAIN;
         }}
 
         # Alernative method to redirect any request for a file not present on the Nginx server to the C2 server
@@ -262,7 +270,7 @@ print("# {}".format(ua))
 print("## Profile URIS Found ({}):".format(str(len(uris))))
 for uri in uris: 
     print("# {}".format(uri))
-print(nginx_template.format(uris=uris_string,ua=ua_string,c2server=args.c2server,redirect=args.redirect,hostname=args.hostname))
+print(nginx_template.format(uris=uris_string,ua=ua_string,c2server=args.c2server,redirect=args.redirect,hostname=args.hostname,cert_path=cert_location))
 
 # Print Errors Found
 if errorfound: 
