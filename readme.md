@@ -3,6 +3,7 @@
 This project converts a Cobalt Strike profile to a functional mod_rewrite `.htaccess` or Nginx config file to support HTTP reverse proxy redirection to a Cobalt Strike teamserver. The use of reverse proxies provides protection to backend C2 servers from profiling, investigation, and general internet background radiation.
 
 ***Note***: You should test and tune the output as needed before deploying, but these scripts should handle the heavy lifting.
+
 ***Note by lapolis***: THIS IS NOT AN IMPROVED version of the original `cs2nginx.py`, all the modifications are just based on personal taste and lazynes.
 
 ## Features
