@@ -126,7 +126,7 @@ Next, reload apache, and monitor `/var/log/access.log` `/var/log/error.log` to s
 
 Save the cs2nginx.py output to `/etc/nginx/nginx.conf` and modify as needed (SSL parameters).
 
-`python3 ./cs2nginx.py -i havex.profile -c https://127.0.0.1 -r https://www.google.com -H mydomain.local >/etc/nginx/nginx.conf`
+`python3 ./cs2nginx.py -i havex.profile -c https://127.0.0.1 -r https://www.google.com -H mydomain.local -f www.domain.com >/etc/nginx/nginx.conf`
 
 Finally, restart nginx after modifying the server configuration file.
 
