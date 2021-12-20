@@ -157,7 +157,7 @@ http {{
 
     # Disable detailed NGINX "Server" header
     server_tokens off;
-    more_set_headers 'Server: Server';
+    # more_set_headers 'Server: Server';
     # Disable referrers when we redirect useragents away from this server
     add_header Referrer-Policy "no-referrer";
 
@@ -245,22 +245,28 @@ http {{
         #       redirector's root page due to the custom error handling configured above
         # Note: This intentionally does not handle default Beacon staging ^/....
         location ~ ^({uris})$ {{
+
             ## TO TEST !!!
+            # If you want to pass the C2 server's "Server" header through then uncomment this line
+            # proxy_pass_header Server;
+            expires             off;
+            proxy_redirect      off;
+            proxy_set_header    Host                $host;
+            proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
+            proxy_set_header    X-Real-IP           $remote_addr;
+
             if ($http_user_agent = "{ua}") {{
                 proxy_pass          $C2_SERVER;
-            
-                # If you want to pass the C2 server's "Server" header through then uncomment this line
-                # proxy_pass_header Server;
-                expires             off;
-                proxy_redirect      off;
-                proxy_set_header    Host                $host;
-                proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
-                proxy_set_header    X-Real-IP           $remote_addr;
+                ## error_page 489 = @check_ua;
             }}
             if ($http_user_agent != "{ua}") {{
                 return 302 $REDIRECT_DOMAIN;
             }}
         }}
+
+        #location @check_ua {{ 
+        #    proxy_pass          $C2_SERVER;
+        #}}
 
         # Redirect requests to the $REDIRECT_DOMAIN + Original request URI
         location @redirect {{
