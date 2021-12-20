@@ -24,7 +24,8 @@ parser = argparse.ArgumentParser(description=description)
 parser.add_argument('-i', dest='inputfile', help='C2 Profile file', required=True)
 parser.add_argument('-c', dest='c2server', help='C2 Server URL (e.g., http://teamserver_ip or https://teamserver_domain)', required=True)
 parser.add_argument('-r', dest='redirect', help='Redirect non-matching requests to this URL (http://google.com)', required=True)
-parser.add_argument('-f', dest='folder', help='Folder containgin the certificates generated with letsencrypt. NOT the full path!! Usualii is the domain name or www.domain_name', required=False)
+parser.add_argument('-f', dest='folder', help='Folder containing the certificates generated with letsencrypt. NOT the full path!! Usually is the domain name or www.domain_name', required=False)
+parser.add_argument('-s', dest='ssl_off', help='Disable ssl, Default: False', required=False, action='store_true')
 parser.add_argument('-H', dest='hostname', help='Hostname for Nginx redirector', required=True)
 
 args = parser.parse_args()
@@ -102,6 +103,32 @@ ua_string = ua.replace('(','\(').replace(')','\)')
 # Create URI string in modrewrite syntax. "*" are needed in regex to support GET and uri-append parameters on the URI
 uris_string = ".*|".join(uris) + ".*"
 
+ssl_off = args.ssl_off
+if ssl_off:
+    lport_set = '''listen 80;
+        listen [::]:80;
+    '''
+else:
+    lport_set = '''listen 443 ssl;
+        listen [::]:443 ssl;
+        ssl on;
+    '''
+
+if cert_location != '<DOMAIN_NAME>':
+    certs = f'''ssl_certificate /etc/letsencrypt/live/{cert_location}/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/{cert_location}/privkey.pem; # managed by Certbot
+        ssl_session_cache shared:le_nginx_SSL:1m; # managed by Certbot
+        ssl_session_timeout 1440m; # managed by Certbot
+        ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # managed by Certbot
+        ssl_prefer_server_ciphers on; # managed by Certbot'''
+else:
+    certs = f'''# ssl_certificate /etc/letsencrypt/live/{cert_location}/fullchain.pem; # managed by Certbot
+        # ssl_certificate_key /etc/letsencrypt/live/{cert_location}/privkey.pem; # managed by Certbot
+        # ssl_session_cache shared:le_nginx_SSL:1m; # managed by Certbot
+        # ssl_session_timeout 1440m; # managed by Certbot
+        # ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # managed by Certbot
+        # ssl_prefer_server_ciphers on; # managed by Certbot'''
+
 nginx_template = '''
 ########################################
 ## /etc/nginx/nginx.conf START
@@ -177,25 +204,15 @@ http {{
         set $REDIRECT_DOMAIN {redirect};
         server_name {hostname};
 
-        #########################
+        #####################
         # Listening ports
-        #########################
-        #listen 80;
-        #listen [::]:80;
-        
         #####################
-        # SSL Configuration
-        #####################
-        listen 443 ssl;
-        listen [::]:443 ssl;
-        ssl on;
+        {lport_set}
 
-        ssl_certificate /etc/letsencrypt/live/{cert_path}/fullchain.pem; # managed by Certbot
-        ssl_certificate_key /etc/letsencrypt/live/{cert_path}/privkey.pem; # managed by Certbot
-        ssl_session_cache shared:le_nginx_SSL:1m; # managed by Certbot
-        ssl_session_timeout 1440m; # managed by Certbot
-        ssl_protocols TLSv1 TLSv1.1 TLSv1.2; # managed by Certbot
-        ssl_prefer_server_ciphers on; # managed by Certbot
+        #####################
+        # Certificates
+        #####################
+        {certs}
 
         #########################################
         # Server root directory for serving files
@@ -277,7 +294,14 @@ print("# {}".format(ua))
 print("## Profile URIS Found ({}):".format(str(len(uris))))
 for uri in uris: 
     print("# {}".format(uri))
-print(nginx_template.format(uris=uris_string,ua=ua_string,c2server=args.c2server,redirect=args.redirect,hostname=args.hostname,cert_path=cert_location))
+
+print(nginx_template.format(uris=uris_string, \
+                            ua=ua_string, \
+                            lport_set=lport_set, \
+                            certs=certs, \
+                            c2server=args.c2server, \
+                            redirect=args.redirect, \
+                            hostname=args.hostname))
 
 # Print Errors Found
 if errorfound: 
