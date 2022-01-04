@@ -245,23 +245,25 @@ http {{
         #       redirector's root page due to the custom error handling configured above
         # Note: This intentionally does not handle default Beacon staging ^/....
         location ~ ^({uris})$ {{
+	    proxy_pass          $C2_SERVER;
 
             ## TO TEST !!!
             # If you want to pass the C2 server's "Server" header through then uncomment this line
             # proxy_pass_header Server;
-            expires             off;
+            
+	    expires             off;
             proxy_redirect      off;
             proxy_set_header    Host                $host;
             proxy_set_header    X-Forwarded-For     $proxy_add_x_forwarded_for;
             proxy_set_header    X-Real-IP           $remote_addr;
 
-            if ($http_user_agent = "{ua}") {{
-                proxy_pass          $C2_SERVER;
-                ## error_page 489 = @check_ua;
-            }}
-            if ($http_user_agent != "{ua}") {{
-                return 302 $REDIRECT_DOMAIN;
-            }}
+            #if ($http_user_agent = "{ua}") {{
+            #    proxy_pass          $C2_SERVER;
+            #    ## error_page 489 = @check_ua;
+            #}}
+            #if ($http_user_agent != "{ua}") {{
+            #    return 302 $REDIRECT_DOMAIN;
+            #}}
         }}
 
         #location @check_ua {{ 
